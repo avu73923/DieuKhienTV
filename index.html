@@ -220,6 +220,7 @@ function tryUrls(urls, setup){
       const url = urls[i++];
       tried.push(url.replace(/^(wss?:\/\/[^/?]+).*$/, '$1'));
       let st = 0, opened = false, t1, t2, ws;   // st: 0 đang chờ, 1 thành công, 2 thất bại
+      const seen = [];                          // các sự kiện TV đã gửi, để chẩn đoán
       const fail = (e, advance) => {
         if (st) return; st = 2; clearTimeout(t1); clearTimeout(t2); lastErr = e;
         try { ws.close(); } catch {}
@@ -235,14 +236,18 @@ function tryUrls(urls, setup){
       ws.onmessage = ev => {
         if (st) return;
         let m; try { m = JSON.parse(ev.data); } catch { return; }
+        seen.push(m.event || m.type || '?');
         const r = setup.onmessage(m, ws);
         if (r === 'ok') { st = 1; clearTimeout(t2); resolve(ws); }
         else if (r instanceof Error) fail(r, false);
       };
       ws.onerror = () => { if (!opened) fail(new Error('Không mở được ' + url), true); };
-      ws.onclose = () => {
+      ws.onclose = ev => {
         if (st === 1) setup.onclose && setup.onclose();
-        else if (st === 0) fail(new Error(opened ? 'TV đóng kết nối' : 'Không mở được ' + url), !opened);
+        else if (st === 0){
+          const info = opened ? ` (mã ${ev && ev.code}${seen.length ? ', TV đã gửi: ' + seen.join(', ') : ', TV chưa gửi gì'})` : '';
+          fail(new Error(opened ? 'TV đóng kết nối' + info : 'Không mở được ' + url), !opened);
+        }
       };
     };
     next();
@@ -282,13 +287,11 @@ const samsung = {
   help:'Samsung (đời 2016 trở lên): lần đầu TV hiện hộp thoại xin quyền, hãy chọn Cho phép bằng nút/cần điều khiển trên TV. Nếu báo lỗi, mở https://IP-CỦA-TV:8002 trong tab mới, chấp nhận cảnh báo chứng chỉ rồi thử lại. Không bật được TV đang tắt hẳn từ trang web.',
   padHelp:'Samsung: kéo ngón tay/chuột để di chuyển lên/xuống/trái/phải, chạm nhanh để chọn OK.',
   apps:[['YouTube','111299001912'],['Netflix','3201907018807'],['Prime Video','3201910019365'],['Disney+','3201901017640'],['Spotify','3201606009684'],['Trình duyệt','org.tizen.browser']],
-  async connect(ip, onClosed){
-    const name = btoa('WebRemote');
-    const tok = LS.get('samsungToken_' + ip);
-    const q = '/api/v2/channels/samsung.remote.control?name=' + name;
+  _try(ip, tok, onClosed){
+    const q = '/api/v2/channels/samsung.remote.control?name=' + btoa('WebRemote');
     const urls = [`wss://${ip}:8002${q}${tok ? '&token=' + encodeURIComponent(tok) : ''}`, `ws://${ip}:8001${q}`];
-    this.ws = await tryUrls(urls, {
-      onopen(){ ui.status('Chờ bạn chọn "Cho phép" trên TV…', 'warn'); },
+    return tryUrls(urls, {
+      onopen(){ ui.status('Chờ bạn chọn "Cho phép" trên TV (dùng nút vật lý trên TV)…', 'warn'); },
       onmessage(m){
         if (m.event === 'ms.channel.connect'){
           if (m.data && m.data.token) LS.set('samsungToken_' + ip, m.data.token);
@@ -296,9 +299,19 @@ const samsung = {
         }
         if (m.event === 'ms.channel.unauthorized') return new Error('TV từ chối kết nối');
         if (m.event === 'ms.channel.timeOut') return new Error('TV hết thời gian chờ cho phép');
+        if (m.event === 'ms.error') return new Error('TV báo lỗi: ' + ((m.data && m.data.message) || 'không rõ'));
       },
       onclose: onClosed
     });
+  },
+  async connect(ip, onClosed){
+    const tok = LS.get('samsungToken_' + ip);
+    try { this.ws = await this._try(ip, tok, onClosed); }
+    catch (e) {
+      if (!tok) throw e;                          // mã cũ có thể đã bị TV thu hồi: xóa rồi thử lại một lần không có mã
+      LS.set('samsungToken_' + ip, '');
+      this.ws = await this._try(ip, '', onClosed);
+    }
     this.buf = '';
   },
   send(o){ if (!this.ws || this.ws.readyState !== 1) throw new Error('Chưa kết nối TV'); this.ws.send(JSON.stringify(o)); },
@@ -446,7 +459,7 @@ async function doConnect(){
     connected = false;
     ui.status('Lỗi: ' + (err.message || err), 'bad');
     ui.toast('Kết nối thất bại. Xem hướng dẫn khắc phục ngay dưới ô kết nối.');
-    showCertHelp(ip);
+    showCertHelp(ip, err);
   } finally { btn.disabled = false; btn.blur(); }
 }
 function doDisconnect(silent){
@@ -456,10 +469,17 @@ function doDisconnect(silent){
 }
 
 // Samsung/LG đời mới chỉ nhận kết nối bảo mật (wss) bằng chứng chỉ tự ký: phải mở địa chỉ https của TV một lần để trình duyệt chấp nhận.
-function showCertHelp(ip){
+function showCertHelp(ip, err){
   const box = $('#certHelp'); box.textContent = '';
   const port = {samsung:8002, lg:3001}[driver && driver.id];
   if (!port){ box.hidden = true; return; }
+  // Kết nối bảo mật đã mở được nhưng TV đóng lại: vấn đề là quyền truy cập trên TV, không phải chứng chỉ.
+  if (err && /đóng kết nối|từ chối|chờ cho phép/.test(err.message || '')){
+    box.textContent = driver.id === 'samsung'
+      ? 'TV đã nhận kết nối nhưng không cho phép thiết bị này. Cách khắc phục: (1) Bấm Kết nối rồi nhìn màn hình TV: sẽ có hộp thoại xin quyền (tên "WebRemote"). Chọn Cho phép bằng nút hoặc cần joystick vật lý trên TV, trong khoảng 30 giây. (2) Nếu không thấy hộp thoại: trên TV vào Cài đặt → Chung → Quản lý thiết bị ngoài → Trình quản lý kết nối thiết bị. Đặt Thông báo truy cập khác "Tắt", rồi vào Danh sách thiết bị, xóa mục "WebRemote" nếu có (đang bị chặn) và thử lại. (3) Cuối cùng, tắt TV, rút điện 30 giây rồi cắm lại.'
+      : 'TV đã nhận kết nối nhưng không cho phép thiết bị này. Bấm Kết nối lại, nhìn màn hình TV và chọn Yes bằng cần joystick vật lý. Nếu vẫn lỗi, tắt TV, rút điện 30 giây rồi cắm lại.';
+    box.hidden = false; return;
+  }
   const a = document.createElement('a');
   a.href = `https://${ip}:${port}`; a.target = '_blank'; a.rel = 'noopener'; a.textContent = `https://${ip}:${port}`;
   const tail = driver.id === 'samsung'
