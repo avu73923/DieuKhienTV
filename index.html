@@ -473,6 +473,11 @@ function showCertHelp(ip, err){
   const box = $('#certHelp'); box.textContent = '';
   const port = {samsung:8002, lg:3001}[driver && driver.id];
   if (!port){ box.hidden = true; return; }
+  // Mã 1008 = TV chủ động từ chối theo chính sách (trước cả khi hiện hộp thoại xin quyền).
+  if (driver.id === 'samsung' && err && /mã 1008/.test(err.message || '')){
+    box.textContent = 'TV Samsung đã từ chối chủ động (mã 1008), trước cả khi hỏi quyền. Hãy kiểm tra lần lượt trên TV, dùng nút hoặc cần joystick vật lý: (1) Cài đặt → Chung → Mạng → Cài đặt chuyên gia → bật "IP Remote" (tên có thể là "Điều khiển từ xa IP"; TV đời mới thường có mục này). (2) Cài đặt → Chung → Quản lý thiết bị ngoài → Trình quản lý kết nối thiết bị: đặt Thông báo truy cập khác "Tắt", vào Danh sách thiết bị và xóa mục "WebRemote" nếu có. (3) Tắt TV, rút điện 30 giây, cắm lại rồi bấm Kết nối và chọn Cho phép khi TV hỏi. Nếu đã làm đủ mà vẫn mã 1008, TV đang chặn kết nối từ trình duyệt; khi đó cần một chương trình nhỏ chạy trên máy tính làm cầu nối.';
+    box.hidden = false; return;
+  }
   // Kết nối bảo mật đã mở được nhưng TV đóng lại: vấn đề là quyền truy cập trên TV, không phải chứng chỉ.
   if (err && /đóng kết nối|từ chối|chờ cho phép/.test(err.message || '')){
     box.textContent = driver.id === 'samsung'
