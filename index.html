@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Điều khiển TV</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--btn:#232834;--btn2:#2e3544;--acc:#4f8cff;--ok:#2ecc71;--warn:#f5a524;--bad:#ff5d5d;--tx:#e8ebf2;--mut:#8b93a7;--r:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:20px;margin:0}
+.pill{padding:6px 12px;border-radius:999px;background:var(--btn);color:var(--mut);font-size:13px;max-width:100%}
+.pill.ok{background:#12301f;color:var(--ok)}.pill.warn{background:#3a2c0d;color:var(--warn)}.pill.bad{background:#3a1414;color:var(--bad)}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.conn{display:grid;grid-template-columns:150px 1fr auto auto;gap:10px;align-items:center}
+select,input[type=text]{background:var(--btn);color:var(--tx);border:1px solid #333b4d;border-radius:10px;padding:10px 12px;font:inherit;width:100%;min-width:0}
+.act{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.act.sec{background:var(--btn2)}.act:disabled{opacity:.5}
+.help{color:var(--mut);font-size:13px;margin:10px 0 0}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:14px;align-items:start}
+.row{display:flex;gap:8px;margin-bottom:12px}.row>*{flex:1}
+.b{background:var(--btn);color:var(--tx);border:0;border-radius:12px;min-height:46px;padding:6px 8px;font:inherit;font-size:15px;cursor:pointer;user-select:none;touch-action:manipulation}
+.b:hover{background:var(--btn2)}.b.on,.b:active{background:var(--acc);color:#fff}
+.b.red{background:#4a1d1d}.b.red:hover,.b.red.on{background:var(--bad)}
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 12px}
+.dpad .b{min-height:62px;font-size:20px}.dpad .ok{background:#27314a;font-weight:700}
+.vc{display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;margin-bottom:12px}
+.col{display:flex;flex-direction:column;gap:6px;background:#12151b;border-radius:14px;padding:6px;align-items:stretch;text-align:center}
+.col small{color:var(--mut);font-size:11px;letter-spacing:.06em}
+.col .b{min-height:48px;font-size:20px}
+.mid{background:none;justify-content:center;padding:0}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.colors .b{min-height:16px;height:16px;border-radius:8px}
+.c-r{background:#c0392b}.c-g{background:#27ae60}.c-y{background:#d4ac0d}.c-b{background:#2e86de}
+h2{font-size:14px;margin:0 0 10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.padwrap{display:grid;grid-template-columns:1fr 46px;gap:8px}
+#pad,#scroll{background:#12151b;border:1px dashed #3a4256;border-radius:14px;touch-action:none;display:flex;align-items:center;justify-content:center;color:var(--mut);text-align:center;font-size:13px;user-select:none;cursor:crosshair}
+#pad{height:260px}#scroll{height:260px;writing-mode:vertical-rl;cursor:ns-resize}
+.apps{display:flex;flex-wrap:wrap;gap:8px}.apps .b{flex:0 0 auto;padding:8px 14px}
+.type{display:flex;gap:8px;margin-bottom:8px}
+label.chk{display:flex;gap:6px;align-items:center;color:var(--mut);font-size:13px}
+.mode{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.mode.active .act{background:var(--ok);color:#06220f}
+table{width:100%;border-collapse:collapse;font-size:13px}td{padding:4px 6px;border-bottom:1px solid #232834}td:first-child{white-space:nowrap}
+kbd{background:var(--btn2);border-radius:5px;padding:1px 6px;font:12px ui-monospace,Consolas,monospace}
+#toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:#000c;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;max-width:90vw;z-index:9}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+details summary{cursor:pointer;color:var(--acc)}
+.scan{margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.scanpanel{width:100%;background:#12151b;border-radius:12px;padding:12px}
+.scanpanel .type{margin-bottom:0}
+.bar{height:6px;background:var(--btn);border-radius:4px;overflow:hidden;margin:10px 0 0}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.found{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.found .b{padding:10px 14px;text-align:left}.found .b small{display:block;color:var(--mut);font-size:11px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.conn{grid-template-columns:1fr 1fr}.conn #ip{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>📺 Điều khiển TV</h1><div id="status" class="pill">Chưa kết nối</div></header>
+
+<div class="card">
+  <div class="conn">
+    <select id="brand" aria-label="Hãng TV">
+      <option value="samsung">Samsung</option>
+      <option value="lg">LG webOS</option>
+      <option value="roku">Roku / TCL Roku</option>
+    </select>
+    <input id="ip" type="text" placeholder="Địa chỉ IP của TV, ví dụ 192.168.1.50" autocomplete="off" spellcheck="false">
+    <button id="btnConnect" class="act" type="button">Kết nối</button>
+    <button id="btnDisconnect" class="act sec" type="button">Ngắt</button>
+  </div>
+  <div class="scan">
+    <button id="btnScanToggle" class="act" type="button">🔍 Tìm TV trong mạng</button>
+    <label class="chk"><input id="autoConn" type="checkbox" checked> Tự kết nối lại TV lần trước khi mở trang</label>
+    <div id="scanPanel" class="scanpanel" hidden>
+      <div class="type">
+        <input id="scanPrefix" type="text" placeholder="3 số đầu của dải mạng, ví dụ 192.168.1" autocomplete="off" spellcheck="false">
+        <button id="btnScan" class="act" type="button">Quét</button>
+        <button id="btnScanAll" class="act sec" type="button">Quét các dải phổ biến</button>
+      </div>
+      <div class="bar"><i id="scanBar"></i></div>
+      <p class="help" id="scanMsg">TV phải đang bật và cùng mạng với máy tính. Nếu Chrome hỏi quyền truy cập mạng nội bộ, hãy chọn Cho phép.</p>
+      <div class="found" id="scanResults"></div>
+    </div>
+  </div>
+  <p class="help" id="brandHelp"></p>
+  <p class="help" id="httpsWarn" style="display:none;color:var(--warn)">⚠ Trang đang mở qua https nên trình duyệt sẽ chặn kết nối tới TV. Hãy tải file về và mở trực tiếp (nhấp đúp) trên máy tính cùng mạng Wi-Fi/LAN với TV.</p>
+  <details class="help"><summary>Cách làm lần đầu</summary>
+    <ol>
+      <li>Máy tính và TV phải cùng một mạng Wi-Fi/LAN. Mở file này trực tiếp bằng Chrome hoặc Edge.</li>
+      <li>Tìm IP của TV: Cài đặt TV → Mạng → Trạng thái mạng (hoặc xem trong trang quản trị router).</li>
+      <li>Chọn hãng, nhập IP, bấm Kết nối.</li>
+      <li>Samsung và LG sẽ hiện hộp thoại xin quyền trên TV. Vì điều khiển hỏng, hãy bấm nút/cần điều khiển vật lý nằm dưới viền hoặc sau lưng TV để chọn Cho phép / Yes.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="grid">
+  <div class="card remote">
+    <div class="row">
+      <button class="b red" type="button" data-key="POWER" title="Tắt TV (Shift+P)">⏻</button>
+      <button class="b" type="button" data-key="SOURCE">Nguồn</button>
+      <button class="b" type="button" data-key="MENU">Menu</button>
+      <button class="b" type="button" data-key="INFO">Info</button>
+    </div>
+    <div class="dpad">
+      <span></span><button class="b" type="button" data-key="UP">▲</button><span></span>
+      <button class="b" type="button" data-key="LEFT">◀</button><button class="b ok" type="button" data-key="OK">OK</button><button class="b" type="button" data-key="RIGHT">▶</button>
+      <span></span><button class="b" type="button" data-key="DOWN">▼</button><span></span>
+    </div>
+    <div class="row">
+      <button class="b" type="button" data-key="BACK">↩ Quay lại</button>
+      <button class="b" type="button" data-key="HOME">⌂ Home</button>
+      <button class="b" type="button" data-key="EXIT">✕ Thoát</button>
+    </div>
+    <div class="vc">
+      <div class="col"><button class="b" type="button" data-key="VOL_UP">＋</button><small>ÂM LƯỢNG</small><button class="b" type="button" data-key="VOL_DOWN">－</button></div>
+      <div class="col mid"><button class="b" type="button" data-key="MUTE">🔇</button></div>
+      <div class="col"><button class="b" type="button" data-key="CH_UP">＋</button><small>KÊNH</small><button class="b" type="button" data-key="CH_DOWN">－</button></div>
+    </div>
+    <div class="row">
+      <button class="b" type="button" data-key="REW">⏪</button>
+      <button class="b" type="button" data-key="PLAY">▶</button>
+      <button class="b" type="button" data-key="PAUSE">⏸</button>
+      <button class="b" type="button" data-key="STOP">⏹</button>
+      <button class="b" type="button" data-key="FF">⏩</button>
+    </div>
+    <div class="nums">
+      <button class="b" type="button" data-key="D1">1</button><button class="b" type="button" data-key="D2">2</button><button class="b" type="button" data-key="D3">3</button>
+      <button class="b" type="button" data-key="D4">4</button><button class="b" type="button" data-key="D5">5</button><button class="b" type="button" data-key="D6">6</button>
+      <button class="b" type="button" data-key="D7">7</button><button class="b" type="button" data-key="D8">8</button><button class="b" type="button" data-key="D9">9</button>
+      <span></span><button class="b" type="button" data-key="D0">0</button><span></span>
+    </div>
+    <div class="row colors">
+      <button class="b c-r" type="button" data-key="RED" aria-label="Đỏ"></button>
+      <button class="b c-g" type="button" data-key="GREEN" aria-label="Xanh lá"></button>
+      <button class="b c-y" type="button" data-key="YELLOW" aria-label="Vàng"></button>
+      <button class="b c-b" type="button" data-key="BLUE" aria-label="Xanh dương"></button>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Chuột cảm ứng</h2>
+      <div class="padwrap">
+        <div id="pad">Rê chuột / ngón tay vào đây<br>Chạm nhanh = bấm</div>
+        <div id="scroll">cuộn</div>
+      </div>
+      <p class="help" id="padHelp"></p>
+    </div>
+
+    <div class="card">
+      <h2>Bàn phím</h2>
+      <form id="typeForm" class="type">
+        <input id="typeText" type="text" placeholder="Gõ chữ (có dấu tiếng Việt) rồi bấm Gửi vào ô tìm kiếm trên TV" autocomplete="off">
+        <button class="act" type="submit">Gửi</button>
+      </form>
+      <label class="chk"><input id="typeEnter" type="checkbox" checked> Nhấn Enter sau khi gửi</label>
+      <div class="mode" id="modeBox">
+        <button id="btnTyping" class="act sec" type="button">Chế độ gõ trực tiếp: TẮT (F2)</button>
+        <span class="help" style="margin:0">Bật lên thì mọi phím chữ trên bàn phím máy tính được gõ thẳng vào TV.</span>
+      </div>
+      <label class="chk"><input id="kbdOn" type="checkbox" checked> Dùng bàn phím máy tính làm điều khiển</label>
+      <table style="margin-top:10px">
+        <tr><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></td><td>Di chuyển</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>OK</td></tr>
+        <tr><td><kbd>Esc</kbd> / <kbd>Backspace</kbd></td><td>Quay lại</td></tr>
+        <tr><td><kbd>H</kbd> <kbd>M</kbd> <kbd>S</kbd> <kbd>O</kbd> <kbd>I</kbd> <kbd>E</kbd></td><td>Home, Tắt tiếng, Nguồn vào, Menu, Info, Thoát</td></tr>
+        <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Âm lượng lên / xuống</td></tr>
+        <tr><td><kbd>PgUp</kbd> / <kbd>PgDn</kbd></td><td>Kênh lên / xuống</td></tr>
+        <tr><td><kbd>Space</kbd>, <kbd>,</kbd> <kbd>.</kbd></td><td>Phát/Tạm dừng, Tua lùi, Tua tới</td></tr>
+        <tr><td><kbd>0</kbd>–<kbd>9</kbd></td><td>Số</td></tr>
+        <tr><td><kbd>Shift</kbd>+<kbd>P</kbd></td><td>Tắt nguồn TV</td></tr>
+        <tr><td><kbd>F2</kbd></td><td>Bật/tắt chế độ gõ trực tiếp (<kbd>Esc</kbd> để thoát)</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Ứng dụng nhanh</h2>
+      <div class="apps" id="apps"></div>
+      <div class="type" style="margin-top:10px">
+        <input id="appId" type="text" placeholder="ID ứng dụng tùy chọn" autocomplete="off" spellcheck="false">
+        <button id="btnApp" class="act sec" type="button">Mở</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const LS = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch {} }
+};
+const ui = {
+  status(text, kind){ const s = $('#status'); s.textContent = text; s.className = 'pill ' + (kind || ''); },
+  toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(ui._t); ui._t = setTimeout(() => t.classList.remove('show'), 2800); }
+};
+const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
+
+/* ---------- Mở WebSocket, thử lần lượt nhiều địa chỉ ---------- */
+function tryUrls(urls, setup){
+  return new Promise((resolve, reject) => {
+    let i = 0, lastErr = null;
+    const next = () => {
+      if (i >= urls.length) return reject(lastErr || new Error('Không kết nối được tới TV'));
+      const url = urls[i++];
+      let st = 0, opened = false, t1, t2, ws;   // st: 0 đang chờ, 1 thành công, 2 thất bại
+      const fail = (e, advance) => {
+        if (st) return; st = 2; clearTimeout(t1); clearTimeout(t2); lastErr = e;
+        try { ws.close(); } catch {}
+        advance ? next() : reject(e);
+      };
+      try { ws = new WebSocket(url); } catch (e) { lastErr = e; return next(); }
+      t1 = setTimeout(() => { if (!opened) fail(new Error('Hết thời gian chờ ' + url), true); }, 5000);
+      ws.onopen = () => {
+        opened = true; clearTimeout(t1);
+        t2 = setTimeout(() => fail(new Error('Hết thời gian chờ ghép nối trên TV'), false), 60000);
+        setup.onopen && setup.onopen(ws);
+      };
+      ws.onmessage = ev => {
+        if (st) return;
+        let m; try { m = JSON.parse(ev.data); } catch { return; }
+        const r = setup.onmessage(m, ws);
+        if (r === 'ok') { st = 1; clearTimeout(t2); resolve(ws); }
+        else if (r instanceof Error) fail(r, false);
+      };
+      ws.onerror = () => { if (!opened) fail(new Error('Không mở được ' + url), true); };
+      ws.onclose = () => {
+        if (st === 1) setup.onclose && setup.onclose();
+        else if (st === 0) fail(new Error(opened ? 'TV đóng kết nối' : 'Không mở được ' + url), !opened);
+      };
+    };
+    next();
+  });
+}
+
+/* ---------- Bảng phím ---------- */
+const digits = f => Object.fromEntries([...Array(10).keys()].map(n => ['D' + n, f(n)]));
+const SAMSUNG_KEYS = Object.assign({
+  UP:'KEY_UP',DOWN:'KEY_DOWN',LEFT:'KEY_LEFT',RIGHT:'KEY_RIGHT',OK:'KEY_ENTER',BACK:'KEY_RETURN',HOME:'KEY_HOME',
+  MENU:'KEY_MENU',INFO:'KEY_INFO',EXIT:'KEY_EXIT',SOURCE:'KEY_SOURCE',POWER:'KEY_POWER',
+  VOL_UP:'KEY_VOLUP',VOL_DOWN:'KEY_VOLDOWN',MUTE:'KEY_MUTE',CH_UP:'KEY_CHUP',CH_DOWN:'KEY_CHDOWN',
+  PLAY:'KEY_PLAY',PAUSE:'KEY_PAUSE',STOP:'KEY_STOP',REW:'KEY_REWIND',FF:'KEY_FF',
+  RED:'KEY_RED',GREEN:'KEY_GREEN',YELLOW:'KEY_YELLOW',BLUE:'KEY_BLUE'
+}, digits(n => 'KEY_' + n));
+const ROKU_KEYS = {
+  UP:'Up',DOWN:'Down',LEFT:'Left',RIGHT:'Right',OK:'Select',BACK:'Back',HOME:'Home',MENU:'Info',INFO:'Info',EXIT:'Home',
+  POWER:'PowerOff',VOL_UP:'VolumeUp',VOL_DOWN:'VolumeDown',MUTE:'VolumeMute',CH_UP:'ChannelUp',CH_DOWN:'ChannelDown',
+  PLAY:'Play',PAUSE:'Play',REW:'Rev',FF:'Fwd'
+};
+const LG_BUTTONS = Object.assign({
+  UP:'UP',DOWN:'DOWN',LEFT:'LEFT',RIGHT:'RIGHT',OK:'ENTER',BACK:'BACK',HOME:'HOME',MENU:'MENU',INFO:'INFO',EXIT:'EXIT',
+  RED:'RED',GREEN:'GREEN',YELLOW:'YELLOW',BLUE:'BLUE'
+}, digits(n => String(n)));
+const LG_REQ = {
+  VOL_UP:['ssap://audio/volumeUp'],VOL_DOWN:['ssap://audio/volumeDown'],
+  CH_UP:['ssap://tv/channelUp'],CH_DOWN:['ssap://tv/channelDown'],
+  POWER:['ssap://system/turnOff'],
+  PLAY:['ssap://media.controls/play'],PAUSE:['ssap://media.controls/pause'],STOP:['ssap://media.controls/stop'],
+  REW:['ssap://media.controls/rewind'],FF:['ssap://media.controls/fastForward'],
+  SOURCE:['ssap://system.launcher/launch',{id:'com.webos.app.inputpicker'}]
+};
+
+/* ---------- Samsung (Tizen) ---------- */
+const samsung = {
+  id:'samsung', pointer:false, ws:null, buf:'',
+  help:'Samsung (đời 2016 trở lên): lần đầu TV hiện hộp thoại xin quyền, hãy chọn Cho phép bằng nút/cần điều khiển trên TV. Nếu báo lỗi, mở https://IP-CỦA-TV:8002 trong tab mới, chấp nhận cảnh báo chứng chỉ rồi thử lại. Không bật được TV đang tắt hẳn từ trang web.',
+  padHelp:'Samsung: kéo ngón tay/chuột để di chuyển lên/xuống/trái/phải, chạm nhanh để chọn OK.',
+  apps:[['YouTube','111299001912'],['Netflix','3201907018807'],['Prime Video','3201910019365'],['Disney+','3201901017640'],['Spotify','3201606009684'],['Trình duyệt','org.tizen.browser']],
+  async connect(ip, onClosed){
+    const name = btoa('WebRemote');
+    const tok = LS.get('samsungToken_' + ip);
+    const q = '/api/v2/channels/samsung.remote.control?name=' + name;
+    const urls = [`wss://${ip}:8002${q}${tok ? '&token=' + encodeURIComponent(tok) : ''}`, `ws://${ip}:8001${q}`];
+    this.ws = await tryUrls(urls, {
+      onopen(){ ui.status('Chờ bạn chọn "Cho phép" trên TV…', 'warn'); },
+      onmessage(m){
+        if (m.event === 'ms.channel.connect'){
+          if (m.data && m.data.token) LS.set('samsungToken_' + ip, m.data.token);
+          return 'ok';
+        }
+        if (m.event === 'ms.channel.unauthorized') return new Error('TV từ chối kết nối');
+        if (m.event === 'ms.channel.timeOut') return new Error('TV hết thời gian chờ cho phép');
+      },
+      onclose: onClosed
+    });
+    this.buf = '';
+  },
+  send(o){ if (!this.ws || this.ws.readyState !== 1) throw new Error('Chưa kết nối TV'); this.ws.send(JSON.stringify(o)); },
+  key(k){
+    const code = SAMSUNG_KEYS[k]; if (!code) throw new Error('Phím này không hỗ trợ trên Samsung');
+    this.send({method:'ms.remote.control',params:{Cmd:'Click',DataOfCmd:code,Option:'false',TypeOfRemote:'SendRemoteKey'}});
+  },
+  _sendText(s){ this.send({method:'ms.remote.control',params:{Cmd:utf8b64(s),DataOfCmd:'base64',TypeOfRemote:'SendInputString'}}); },
+  text(s){ this.buf = s; this._sendText(s); },
+  char(c){ this.buf += c; this._sendText(this.buf); },
+  backspace(){ this.buf = this.buf.slice(0, -1); this._sendText(this.buf); },
+  enter(){ this.key('OK'); this.buf = ''; },
+  launch(id){ this.send({method:'ms.channel.emit',params:{event:'ed.apps.launch',to:'host',data:{action_type:'DEEP_LINK',appId:id}}}); },
+  close(){ if (this.ws){ this.ws.onclose = null; try { this.ws.close(); } catch {} this.ws = null; } }
+};
+
+/* ---------- LG webOS ---------- */
+const lg = {
+  id:'lg', pointer:true, ws:null, ptr:null, pending:new Map(), n:0,
+  help:'LG webOS: lần đầu TV hiện hộp thoại ghép nối, hãy chọn Yes bằng cần joystick dưới viền TV. Nếu báo lỗi, mở https://IP-CỦA-TV:3001 trong tab mới, chấp nhận cảnh báo chứng chỉ rồi thử lại. Không bật được TV đang tắt hẳn từ trang web.',
+  padHelp:'LG: con trỏ chuột thật trên màn hình TV. Rê để di chuyển, chạm nhanh để bấm, dải bên phải hoặc con lăn để cuộn.',
+  apps:[['YouTube','youtube.leanback.v4'],['Netflix','netflix'],['Prime Video','amazon'],['Disney+','com.disney.disneyplus-prod'],['Live TV','com.webos.app.livetv'],['HDMI 1','com.webos.app.hdmi1'],['HDMI 2','com.webos.app.hdmi2'],['Trình duyệt','com.webos.app.browser'],['Cài đặt','com.palm.app.settings']],
+  async connect(ip, onClosed){
+    const key = LS.get('lgKey_' + ip);
+    const self = this;
+    const perms = ['LAUNCH','LAUNCH_WEBAPP','APP_TO_APP','CONTROL_AUDIO','CONTROL_DISPLAY','CONTROL_INPUT_JOYSTICK','CONTROL_INPUT_MEDIA_PLAYBACK','CONTROL_INPUT_MEDIA_RECORDING','CONTROL_INPUT_TV','CONTROL_INPUT_TEXT','CONTROL_MOUSE_AND_KEYBOARD','CONTROL_POWER','READ_APP_STATUS','READ_CURRENT_CHANNEL','READ_INPUT_DEVICE_LIST','READ_INSTALLED_APPS','READ_NETWORK_STATE','READ_POWER_STATE','READ_RUNNING_APPS','READ_TV_CHANNEL_LIST','WRITE_NOTIFICATION_TOAST'];
+    this.ws = await tryUrls([`ws://${ip}:3000`, `wss://${ip}:3001`], {
+      onopen(ws){
+        const payload = {forcePairing:false, pairingType:'PROMPT', manifest:{manifestVersion:1, permissions:perms}};
+        if (key) payload['client-key'] = key;
+        ws.send(JSON.stringify({type:'register', id:'register_0', payload}));
+        ui.status('Chờ bạn chọn "Yes" trên TV…', 'warn');
+      },
+      onmessage(m){
+        if (m.type === 'registered'){ if (m.payload && m.payload['client-key']) LS.set('lgKey_' + ip, m.payload['client-key']); return 'ok'; }
+        if (m.type === 'error' && m.id === 'register_0') return new Error(m.error || 'TV từ chối ghép nối');
+      },
+      onclose(){ self._closePtr(); onClosed(); }
+    });
+    this.ws.onmessage = ev => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      const p = this.pending.get(m.id); if (p){ this.pending.delete(m.id); p(m); }
+    };
+    const r = await this.req('ssap://com.webos.service.networkinput/getPointerInputSocket');
+    if (r && r.payload && r.payload.socketPath){
+      try { this.ptr = new WebSocket(r.payload.socketPath); } catch { this.ptr = null; }
+    }
+  },
+  req(uri, payload){
+    return new Promise((res, rej) => {
+      if (!this.ws || this.ws.readyState !== 1) return rej(new Error('Chưa kết nối TV'));
+      const id = 'r' + (++this.n);
+      this.pending.set(id, res);
+      this.ws.send(JSON.stringify({type:'request', id, uri, payload}));
+      setTimeout(() => { if (this.pending.delete(id)) res(null); }, 4000);
+    });
+  },
+  _ptrSend(s){
+    if (!this.ptr || this.ptr.readyState !== 1) throw new Error('Kênh con trỏ của TV chưa sẵn sàng');
+    this.ptr.send(s);
+  },
+  async key(k){
+    if (k === 'MUTE'){
+      const r = await this.req('ssap://audio/getStatus');
+      const p = (r && r.payload) || {};
+      const cur = p.mute !== undefined ? p.mute : (p.volumeStatus && p.volumeStatus.muteStatus);
+      return this.req('ssap://audio/setMute', {mute: !cur});
+    }
+    if (LG_REQ[k]) return this.req(...LG_REQ[k]);
+    if (LG_BUTTONS[k]) return this._ptrSend(`type:button\nname:${LG_BUTTONS[k]}\n\n`);
+    throw new Error('Phím này không hỗ trợ trên LG');
+  },
+  move(dx, dy){ this._ptrSend(`type:move\ndx:${dx}\ndy:${dy}\ndown:0\n\n`); },
+  click(){ this._ptrSend('type:click\n\n'); },
+  scroll(dy){ this._ptrSend(`type:scroll\ndx:0\ndy:${dy}\n\n`); },
+  text(s){ return this.req('ssap://com.webos.service.ime/insertText', {text:s, replace:0}); },
+  char(c){ return this.text(c); },
+  backspace(){ return this.req('ssap://com.webos.service.ime/deleteCharacters', {count:1}); },
+  enter(){ return this.req('ssap://com.webos.service.ime/sendEnterKey'); },
+  launch(id){ return this.req('ssap://system.launcher/launch', {id}); },
+  _closePtr(){ if (this.ptr){ try { this.ptr.close(); } catch {} this.ptr = null; } },
+  close(){ this._closePtr(); if (this.ws){ this.ws.onclose = null; try { this.ws.close(); } catch {} this.ws = null; } this.pending.clear(); }
+};
+
+/* ---------- Roku (ECP, HTTP cổng 8060) ---------- */
+const roku = {
+  id:'roku', pointer:false, base:null,
+  help:'Roku: không cần ghép nối. Vào Settings → System → Advanced system settings → Control by mobile apps, chọn Default hoặc Permissive. Phím âm lượng/kênh chỉ hoạt động trên Roku TV (không có trên que Roku).',
+  padHelp:'Roku: kéo ngón tay/chuột để di chuyển lên/xuống/trái/phải, chạm nhanh để chọn OK.',
+  apps:[['YouTube','837'],['Netflix','12'],['Prime Video','13'],['Disney+','291097']],
+  async connect(ip){
+    this.base = `http://${ip}:8060`;
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 5000);
+    try { await fetch(this.base + '/query/device-info', {mode:'no-cors', signal:ac.signal}); }
+    catch { throw new Error('Không liên lạc được với Roku tại ' + ip); }
+    finally { clearTimeout(t); }
+  },
+  _post(path){
+    if (!this.base) throw new Error('Chưa kết nối TV');
+    return fetch(this.base + path, {method:'POST', mode:'no-cors'});
+  },
+  key(k){
+    const code = ROKU_KEYS[k]; if (!code) throw new Error('Phím này không hỗ trợ trên Roku');
+    return this._post('/keypress/' + code);
+  },
+  async text(s){ for (const c of s) await this.char(c); },
+  char(c){ return this._post('/keypress/Lit_' + encodeURIComponent(c)); },
+  backspace(){ return this._post('/keypress/Backspace'); },
+  enter(){ return this._post('/keypress/Enter'); },
+  launch(id){ return this._post('/launch/' + encodeURIComponent(id)); },
+  close(){ this.base = null; }
+};
+
+const DRIVERS = {samsung, lg, roku};
+
+/* ---------- Trạng thái ứng dụng ---------- */
+let driver = null, connected = false, typing = false, playing = false;
+const brandSel = $('#brand'), ipIn = $('#ip');
+
+function act(fn){
+  if (!driver || !connected){ ui.toast('Chưa kết nối TV'); return; }
+  try {
+    const r = fn();
+    if (r && r.catch) r.catch(e => ui.toast(e.message || String(e)));
+  } catch (e) { ui.toast(e.message || String(e)); }
+}
+const press = k => act(() => driver.key(k));
+
+function onClosed(){ connected = false; ui.status('Mất kết nối với TV', 'bad'); }
+
+async function doConnect(){
+  const ip = ipIn.value.trim();
+  if (!/^[A-Za-z0-9.\-]+$/.test(ip)){ ui.toast('Nhập địa chỉ IP của TV, ví dụ 192.168.1.50'); return; }
+  doDisconnect(true);
+  driver = DRIVERS[brandSel.value];
+  const btn = $('#btnConnect'); btn.disabled = true;
+  ui.status('Đang kết nối…', 'warn');
+  try {
+    await driver.connect(ip, onClosed);
+    connected = true;
+    ui.status('Đã kết nối ' + ip, 'ok');
+    LS.set('tvIp', ip); LS.set('tvConnected', '1');
+  } catch (err) {
+    connected = false;
+    ui.status('Lỗi: ' + (err.message || err), 'bad');
+    ui.toast('Kết nối thất bại. Xem lại IP và phần hướng dẫn hãng TV.');
+  } finally { btn.disabled = false; btn.blur(); }
+}
+function doDisconnect(silent){
+  if (driver) driver.close();
+  connected = false;
+  if (!silent){ ui.status('Chưa kết nối', ''); LS.set('tvConnected', '0'); }
+}
+
+function renderBrand(){
+  const d = DRIVERS[brandSel.value];
+  $('#brandHelp').textContent = d.help;
+  $('#padHelp').textContent = d.padHelp;
+  const box = $('#apps'); box.textContent = '';
+  d.apps.forEach(([label, id]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'b'; b.textContent = label; b.dataset.app = id;
+    box.appendChild(b);
+  });
+  LS.set('tvBrand', brandSel.value);
+}
+
+/* ---------- Nút bấm (giữ để lặp lại) ---------- */
+const REPEAT = new Set(['UP','DOWN','LEFT','RIGHT','VOL_UP','VOL_DOWN','CH_UP','CH_DOWN']);
+let rt1 = 0, rt2 = 0;
+const stopRepeat = () => {
+  clearTimeout(rt1); clearInterval(rt2);
+  document.querySelectorAll('.b.on').forEach(x => x.classList.remove('on'));
+};
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('[data-key]'); if (!b) return;
+  e.preventDefault();
+  const k = b.dataset.key;
+  b.classList.add('on'); press(k);
+  if (REPEAT.has(k)) rt1 = setTimeout(() => { rt2 = setInterval(() => press(k), 140); }, 420);
+});
+['pointerup','pointercancel'].forEach(ev => document.addEventListener(ev, stopRepeat));
+window.addEventListener('blur', stopRepeat);
+
+$('#apps').addEventListener('click', e => { const b = e.target.closest('[data-app]'); if (b) act(() => driver.launch(b.dataset.app)); });
+$('#btnApp').addEventListener('click', () => { const v = $('#appId').value.trim(); if (v) act(() => driver.launch(v)); });
+$('#btnConnect').addEventListener('click', doConnect);
+$('#btnDisconnect').addEventListener('click', () => doDisconnect(false));
+brandSel.addEventListener('change', () => { doDisconnect(false); renderBrand(); });
+ipIn.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); doConnect(); } });
+
+/* ---------- Touchpad ---------- */
+const pad = $('#pad'), scr = $('#scroll');
+let drag = false, lx = 0, ly = 0, t0 = 0, moved = 0, acc = {x:0, y:0}, pend = {x:0, y:0}, raf = 0;
+const STEP = 34;
+function swipe(dx, dy){
+  acc.x += dx; acc.y += dy;
+  while (Math.abs(acc.x) >= STEP){ press(acc.x > 0 ? 'RIGHT' : 'LEFT'); acc.x -= Math.sign(acc.x) * STEP; }
+  while (Math.abs(acc.y) >= STEP){ press(acc.y > 0 ? 'DOWN' : 'UP'); acc.y -= Math.sign(acc.y) * STEP; }
+}
+function flushMove(){
+  raf = 0;
+  const dx = Math.round(pend.x), dy = Math.round(pend.y);
+  pend.x -= dx; pend.y -= dy;
+  if (dx || dy) act(() => driver.move(dx, dy));
+}
+function queueMove(dx, dy){ pend.x += dx; pend.y += dy; if (!raf) raf = requestAnimationFrame(flushMove); }
+
+pad.addEventListener('pointerdown', e => {
+  pad.setPointerCapture(e.pointerId);
+  drag = true; lx = e.clientX; ly = e.clientY; t0 = performance.now(); moved = 0; acc = {x:0, y:0};
+});
+pad.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY;
+  moved += Math.abs(dx) + Math.abs(dy);
+  if (!driver || !connected) return;
+  driver.pointer ? queueMove(dx * 1.6, dy * 1.6) : swipe(dx, dy);
+});
+const endDrag = e => {
+  if (!drag) return; drag = false;
+  if (e.type === 'pointerup' && performance.now() - t0 < 280 && moved < 8)
+    act(() => driver.pointer ? driver.click() : driver.key('OK'));
+};
+pad.addEventListener('pointerup', endDrag);
+pad.addEventListener('pointercancel', endDrag);
+
+function doScroll(dy){
+  if (!driver || !connected) return;
+  if (driver.pointer) act(() => driver.scroll(Math.round(dy)));
+  else { acc.y += dy; while (Math.abs(acc.y) >= STEP){ press(acc.y > 0 ? 'DOWN' : 'UP'); acc.y -= Math.sign(acc.y) * STEP; } }
+}
+let sdrag = false, sly = 0;
+scr.addEventListener('pointerdown', e => { scr.setPointerCapture(e.pointerId); sdrag = true; sly = e.clientY; acc = {x:0, y:0}; });
+scr.addEventListener('pointermove', e => { if (!sdrag) return; const dy = e.clientY - sly; sly = e.clientY; doScroll(dy); });
+['pointerup','pointercancel'].forEach(ev => scr.addEventListener(ev, () => { sdrag = false; }));
+[pad, scr].forEach(el => el.addEventListener('wheel', e => { e.preventDefault(); doScroll(e.deltaY > 0 ? 40 : -40); }, {passive:false}));
+
+/* ---------- Gõ chữ ---------- */
+$('#typeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('#typeText').value; if (!v) return;
+  act(async () => {
+    await driver.text(v);
+    if ($('#typeEnter').checked) await driver.enter();
+  });
+  $('#typeText').value = '';
+});
+function setTyping(on){
+  typing = on;
+  $('#btnTyping').textContent = 'Chế độ gõ trực tiếp: ' + (on ? 'BẬT (Esc để thoát)' : 'TẮT (F2)');
+  $('#modeBox').classList.toggle('active', on);
+  if (on && driver && driver.buf !== undefined) driver.buf = '';
+}
+$('#btnTyping').addEventListener('click', e => { setTyping(!typing); e.currentTarget.blur(); });
+
+/* ---------- Bàn phím máy tính ---------- */
+const KB = {ArrowUp:'UP',ArrowDown:'DOWN',ArrowLeft:'LEFT',ArrowRight:'RIGHT',Enter:'OK',Escape:'BACK',Backspace:'BACK',PageUp:'CH_UP',PageDown:'CH_DOWN',Home:'HOME'};
+const KBC = {h:'HOME',m:'MUTE',i:'INFO',e:'EXIT',s:'SOURCE',o:'MENU','+':'VOL_UP','=':'VOL_UP','-':'VOL_DOWN','_':'VOL_DOWN',',':'REW','.':'FF'};
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if (e.key === 'F2'){ e.preventDefault(); setTyping(!typing); return; }
+
+  if (typing){
+    if (e.key === 'Escape'){ e.preventDefault(); setTyping(false); return; }
+    if (e.key === 'Backspace'){ e.preventDefault(); act(() => driver.backspace()); return; }
+    if (e.key === 'Enter'){ e.preventDefault(); act(() => driver.enter()); return; }
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ e.preventDefault(); press(KB[e.key]); return; }
+    if (e.key.length === 1){ e.preventDefault(); act(() => driver.char(e.key)); }
+    return;
+  }
+  if (!$('#kbdOn').checked) return;
+
+  let k = null;
+  if (e.key === 'P') k = 'POWER';                       // Shift+P
+  else if (KB[e.key]) k = KB[e.key];
+  else if (e.key === ' ') { k = playing ? 'PAUSE' : 'PLAY'; playing = !playing; }
+  else if (/^[0-9]$/.test(e.key)) k = 'D' + e.key;
+  else if (KBC[e.key.toLowerCase()] && !e.shiftKey) k = KBC[e.key.toLowerCase()];
+  else if (KBC[e.key]) k = KBC[e.key];
+  if (!k) return;
+  e.preventDefault();
+  press(k);
+});
+
+/* ---------- Tìm TV trong mạng ---------- */
+/* SCAN-CORE-START */
+const PROBE_MS = 1500;
+const probeHttp = (ip, port, path) => new Promise(res => {
+  const ac = new AbortController();
+  const t = setTimeout(() => { ac.abort(); res(false); }, PROBE_MS);
+  fetch(`http://${ip}:${port}${path}`, {mode:'no-cors', signal:ac.signal})
+    .then(() => { clearTimeout(t); res(true); }, () => { clearTimeout(t); res(false); });
+});
+const probeWs = (ip, port) => new Promise(res => {
+  let ws, t, fin = false;
+  const done = v => {
+    if (fin) return; fin = true; clearTimeout(t);
+    if (ws){ ws.onopen = ws.onerror = null; try { ws.close(); } catch {} }
+    res(v);
+  };
+  t = setTimeout(() => done(false), PROBE_MS);
+  try { ws = new WebSocket(`ws://${ip}:${port}`); ws.onopen = () => done(true); ws.onerror = () => done(false); }
+  catch { done(false); }
+});
+const PROBES = {
+  roku:    ip => probeHttp(ip, 8060, '/'),
+  samsung: ip => probeHttp(ip, 8001, '/api/v2/'),
+  lg:      ip => probeWs(ip, 3000)
+};
+let scanAbort = false;
+async function scanPrefix(prefix, onProgress, onFound){
+  const ips = Array.from({length:254}, (_, i) => `${prefix}.${i + 1}`);
+  let idx = 0, done = 0;
+  const worker = async () => {
+    while (!scanAbort && idx < ips.length){
+      const ip = ips[idx++];
+      const [r, s, l] = await Promise.all([PROBES.roku(ip), PROBES.samsung(ip), PROBES.lg(ip)]);
+      if (r) onFound({brand:'roku', ip});
+      else if (s) onFound({brand:'samsung', ip});
+      else if (l) onFound({brand:'lg', ip});
+      onProgress(++done);
+    }
+  };
+  await Promise.all(Array.from({length:24}, () => worker()));
+}
+/* SCAN-CORE-END */
+
+const validPrefix = p => /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(p) && p.split('.').every(n => +n <= 255);
+const BRAND_NAME = {samsung:'Samsung', lg:'LG webOS', roku:'Roku'};
+const COMMON_PREFIXES = ['192.168.1','192.168.0','192.168.100','192.168.2','10.0.0','10.0.1','172.16.0'];
+const scanUi = {
+  panel:$('#scanPanel'), bar:$('#scanBar'), msg:$('#scanMsg'), res:$('#scanResults'),
+  go:$('#btnScan'), all:$('#btnScanAll'), prefix:$('#scanPrefix')
+};
+const foundIps = new Set();
+let scanning = false;
+
+function addFound(f){
+  if (foundIps.has(f.ip)) return;
+  foundIps.add(f.ip);
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'b'; b.dataset.ip = f.ip; b.dataset.brand = f.brand;
+  b.textContent = BRAND_NAME[f.brand] + (f.brand === 'lg' ? ' (có thể)' : '');
+  const s = document.createElement('small'); s.textContent = f.ip; b.appendChild(s);
+  scanUi.res.appendChild(b);
+}
+async function runScan(prefixes){
+  if (scanning){ scanAbort = true; return; }
+  const bad = prefixes.find(p => !validPrefix(p));
+  if (bad !== undefined){ ui.toast('Nhập 3 số đầu của dải mạng, ví dụ 192.168.1'); return; }
+  scanning = true; scanAbort = false; foundIps.clear(); scanUi.res.textContent = '';
+  scanUi.go.textContent = 'Dừng'; scanUi.all.disabled = true;
+  const total = prefixes.length * 254; let base = 0;
+  for (const p of prefixes){
+    if (scanAbort) break;
+    scanUi.msg.textContent = `Đang quét ${p}.1 – ${p}.254 …`;
+    await scanPrefix(p, d => { scanUi.bar.style.width = (100 * (base + d) / total) + '%'; }, addFound);
+    base += 254;
+  }
+  const stopped = scanAbort;
+  scanning = false; scanAbort = false;
+  scanUi.go.textContent = 'Quét'; scanUi.all.disabled = false;
+  scanUi.bar.style.width = stopped ? scanUi.bar.style.width : '100%';
+  scanUi.msg.textContent = foundIps.size
+    ? `${stopped ? 'Đã dừng. ' : ''}Tìm thấy ${foundIps.size} thiết bị. Bấm vào TV của bạn để kết nối.`
+    : (stopped ? 'Đã dừng.' : 'Không thấy TV nào. Hãy bật TV, kiểm tra cùng mạng, thử dải khác hoặc nhập IP thủ công (Samsung đời mới đôi khi không hiện ra).');
+}
+$('#btnScanToggle').addEventListener('click', () => { scanUi.panel.hidden = !scanUi.panel.hidden; });
+scanUi.go.addEventListener('click', () => { const p = scanUi.prefix.value.trim(); LS.set('scanPrefix', p); runScan([p]); });
+scanUi.all.addEventListener('click', () => {
+  const first = scanUi.prefix.value.trim();
+  runScan([...new Set([first, ...COMMON_PREFIXES].filter(validPrefix))]);
+});
+scanUi.res.addEventListener('click', e => {
+  const b = e.target.closest('[data-ip]'); if (!b) return;
+  doDisconnect(true);
+  brandSel.value = b.dataset.brand; renderBrand();
+  ipIn.value = b.dataset.ip;
+  doConnect();
+});
+$('#autoConn').addEventListener('change', e => LS.set('autoConn', e.target.checked ? '1' : '0'));
+
+// Đoán dải mạng của máy tính qua WebRTC (không phải trình duyệt nào cũng cho phép)
+function guessPrefix(){
+  return new Promise(res => {
+    try {
+      const pc = new RTCPeerConnection({iceServers:[]});
+      pc.createDataChannel('x');
+      const t = setTimeout(() => { pc.close(); res(null); }, 1500);
+      pc.onicecandidate = e => {
+        if (!e.candidate) return;
+        const m = /(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}/.exec(e.candidate.candidate);
+        if (m && /^(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))/.test(m[1])){ clearTimeout(t); pc.close(); res(m[1]); }
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => { clearTimeout(t); res(null); });
+    } catch { res(null); }
+  });
+}
+
+/* ---------- Khởi tạo ---------- */
+const savedBrand = LS.get('tvBrand'); if (savedBrand && DRIVERS[savedBrand]) brandSel.value = savedBrand;
+const savedIp = LS.get('tvIp'); if (savedIp) ipIn.value = savedIp;
+renderBrand();
+if (location.protocol === 'https:') $('#httpsWarn').style.display = 'block';
+
+// Điền sẵn dải mạng: lần quét trước > IP TV đã lưu > đoán qua WebRTC > mặc định
+$('#autoConn').checked = LS.get('autoConn') !== '0';
+{
+  const ipPrefix = savedIp && /^\d+\.\d+\.\d+\.\d+$/.test(savedIp) ? savedIp.split('.').slice(0, 3).join('.') : '';
+  scanUi.prefix.value = LS.get('scanPrefix') || ipPrefix || '192.168.1';
+  if (!LS.get('scanPrefix') && !ipPrefix) guessPrefix().then(p => { if (p && !scanning) scanUi.prefix.value = p; });
+}
+// Tự kết nối lại TV lần trước (giống app điều khiển trên điện thoại)
+if (savedIp && LS.get('tvConnected') === '1' && LS.get('autoConn') !== '0') doConnect();
+})();
+</script>
+</body>
+</html>
