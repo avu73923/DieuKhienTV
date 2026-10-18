@@ -87,6 +87,7 @@ details summary{cursor:pointer;color:var(--acc)}
       <div class="found" id="scanResults"></div>
     </div>
   </div>
+  <p class="help" id="certHelp" hidden style="color:var(--warn)"></p>
   <p class="help" id="brandHelp"></p>
   <p class="help" id="httpsWarn" style="display:none;color:var(--warn)">⚠ Trang đang mở qua https nên trình duyệt sẽ chặn kết nối tới TV. Hãy tải file về và mở trực tiếp (nhấp đúp) trên máy tính cùng mạng Wi-Fi/LAN với TV.</p>
   <details class="help"><summary>Cách làm lần đầu</summary>
@@ -210,9 +211,14 @@ const utf8b64 = s => btoa(unescape(encodeURIComponent(s)));
 function tryUrls(urls, setup){
   return new Promise((resolve, reject) => {
     let i = 0, lastErr = null;
+    const tried = [];
     const next = () => {
-      if (i >= urls.length) return reject(lastErr || new Error('Không kết nối được tới TV'));
+      if (i >= urls.length)
+        return reject(tried.length > 1
+          ? new Error('Đã thử ' + tried.join(' và ') + ' nhưng TV không mở kết nối')
+          : (lastErr || new Error('Không kết nối được tới TV')));
       const url = urls[i++];
+      tried.push(url.replace(/^(wss?:\/\/[^/?]+).*$/, '$1'));
       let st = 0, opened = false, t1, t2, ws;   // st: 0 đang chờ, 1 thành công, 2 thất bại
       const fail = (e, advance) => {
         if (st) return; st = 2; clearTimeout(t1); clearTimeout(t2); lastErr = e;
@@ -430,6 +436,7 @@ async function doConnect(){
   driver = DRIVERS[brandSel.value];
   const btn = $('#btnConnect'); btn.disabled = true;
   ui.status('Đang kết nối…', 'warn');
+  $('#certHelp').hidden = true;
   try {
     await driver.connect(ip, onClosed);
     connected = true;
@@ -438,13 +445,28 @@ async function doConnect(){
   } catch (err) {
     connected = false;
     ui.status('Lỗi: ' + (err.message || err), 'bad');
-    ui.toast('Kết nối thất bại. Xem lại IP và phần hướng dẫn hãng TV.');
+    ui.toast('Kết nối thất bại. Xem hướng dẫn khắc phục ngay dưới ô kết nối.');
+    showCertHelp(ip);
   } finally { btn.disabled = false; btn.blur(); }
 }
 function doDisconnect(silent){
   if (driver) driver.close();
   connected = false;
   if (!silent){ ui.status('Chưa kết nối', ''); LS.set('tvConnected', '0'); }
+}
+
+// Samsung/LG đời mới chỉ nhận kết nối bảo mật (wss) bằng chứng chỉ tự ký: phải mở địa chỉ https của TV một lần để trình duyệt chấp nhận.
+function showCertHelp(ip){
+  const box = $('#certHelp'); box.textContent = '';
+  const port = {samsung:8002, lg:3001}[driver && driver.id];
+  if (!port){ box.hidden = true; return; }
+  const a = document.createElement('a');
+  a.href = `https://${ip}:${port}`; a.target = '_blank'; a.rel = 'noopener'; a.textContent = `https://${ip}:${port}`;
+  const tail = driver.id === 'samsung'
+    ? '(3) Nếu vẫn lỗi, trên TV vào Cài đặt → Chung → Quản lý thiết bị ngoài → Trình quản lý kết nối thiết bị: đặt Thông báo truy cập khác "Tắt" và xóa thiết bị bị chặn trong Danh sách thiết bị. (4) Cuối cùng, tắt TV, rút điện 30 giây rồi cắm lại.'
+    : '(3) Nếu vẫn lỗi, tắt TV, rút điện 30 giây rồi cắm lại.';
+  box.append('Cách khắc phục: (1) Mở ', a, ' trong tab mới; nếu trình duyệt cảnh báo chứng chỉ thì chọn Nâng cao → Tiếp tục truy cập (trang trắng hoặc báo lỗi cũng không sao). (2) Quay lại đây, bấm Kết nối lần nữa và chọn Cho phép trên TV. ' + tail);
+  box.hidden = false;
 }
 
 function renderBrand(){
